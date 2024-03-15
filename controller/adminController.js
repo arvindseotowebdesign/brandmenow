@@ -1,7 +1,7 @@
 
 import adminModel from "../models/adminModel.js";
 import bcrypt from 'bcrypt'
-import galleryModel from "../models/GalleryModel.js";
+import galleryModel from "../models/galleryModel.js";
 import blogModel from "../models/blogModel.js";
 import categoryModel from "../models/categoryModel.js";
 import productModel from "../models/productModel.js";
