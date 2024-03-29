@@ -11,6 +11,7 @@ import productModel from "../models/productModel.js";
 import orderModel from "../models/orderModel.js";
 import cartModel from "../models/cartModel.js";
 import homeModel from "../models/homeModel.js";
+import homeLayoutModel from "../models/homeLayoutModel.js";
 import privateProductModel from "../models/privateProductModel.js";
 import stripe from 'stripe';
 import nodemailer from 'nodemailer';
@@ -144,6 +145,69 @@ export const getHomeData = async (req, res) => {
   } catch (error) {
     return res.status(400).json({
       message: `Error while getting home settings: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+
+export const UsergetAllHomeProducts = async (req, res) => {
+
+  try {
+    const products = await productModel.find({}, '_id title pImage regularPrice salePrice stock');
+
+    if (!products) {
+      return res.status(200).send
+        ({
+          message: 'NO products Find',
+          success: false,
+        });
+    }
+    return res.status(200).send
+      ({
+        message: 'All products List ',
+        proCount: products.length,
+        success: true,
+        products,
+      });
+
+  } catch (error) {
+    return res.status(500).send
+      ({
+        message: `error while All products ${error}`,
+        success: false,
+        error
+      })
+  }
+
+
+}
+
+
+// get home layout data 
+
+
+export const getHomeLayoutData = async (req, res) => {
+  try {
+    const homeLayout = await homeLayoutModel.findOne();
+
+    if (!homeLayout) {
+      return res.status(200).send({
+        message: "Home Layout Not Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Found home Layout Data!",
+      success: true,
+      homeLayout,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while getting home Layout: ${error}`,
       success: false,
       error,
     });
