@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
     {
+        p_id: {
+            type: Number,
+            require: [true, "product id is required"],
+            unique: true
+        },
         title: {
             type: String,
             require: [true, "Title is required"],
@@ -19,7 +24,6 @@ const productSchema = new mongoose.Schema(
         },
         slug: {
             type: String,
-            unique: true
         },
         metaDescription: {
             type: String,
@@ -49,15 +53,6 @@ const productSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Category'
         }], // Define Category as an array of ObjectIds
-
-
-        tag: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "tag", // Reference to the same "Category" model
-            // type: Array,
-        }],
-
-
     },
     { timestamps: true }
 );
