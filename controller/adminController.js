@@ -10,6 +10,8 @@ import tagModel from "../models/tagModel.js";
 import privateProductModel from "../models/privateProductModel.js";
 import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
+import homeLayoutModel from "../models/homeLayoutModel.js";
+
 // image function 
 
 import multer from 'multer';
@@ -738,8 +740,19 @@ export const AddAdminProduct = async (req, res) => {
             });
         }
 
+
+        const lastProduct = await productModel.findOne().sort({ _id: -1 }).limit(1);
+        if (typeof lastProduct.p_id === 'string') {
+            lastProduct.p_id = parseFloat(lastProduct.p_id);
+        }
+
+        const lastProductId = lastProduct ? lastProduct.p_id : 0;
+
+        // Calculate the auto-increment ID
+        const p_id = lastProductId + 1;
+
         // Create a new category with the specified parent
-        const newProduct = new productModel({ title, description, pImage, images, slug, metaDescription, metaTitle, regularPrice, salePrice, status, stock, variations, metaKeywords, Category, tag });
+        const newProduct = new productModel({ p_id, title, description, pImage, images, slug, metaDescription, metaTitle, regularPrice, salePrice, status, stock, variations, metaKeywords, Category, tag });
         await newProduct.save();
 
         return res.status(201).send({
@@ -1875,4 +1888,248 @@ export const getUserIdAdmin = async (req, res) => {
 
 
 
+export const exportAllProAdmin = async (req, res) => {
 
+    try {
+        // Fetch data from the database (assuming using Mongoose)
+        //   const products = await productModel.find({}, 'title description pImage images slug regularPrice salePrice status stock Category weight tag').lean();
+        const products = await productModel.find({}, 'p_id title description Category pImage  images slug regularPrice salePrice status stock weight gst hsn sku variations specifications metaTitle metaDescription metaKeywords ').lean();
+
+        const filename = 'all_products.csv';
+
+        // Stringify the product data
+        stringify(products, { header: true }, (err, csvString) => {
+            if (err) {
+                console.error('Error generating CSV:', err);
+                res.status(500).send('Internal Server Error');
+                return;
+            }
+
+            // Set response headers
+            res.header('Content-Type', 'text/csv');
+            res.attachment(filename);
+
+            // Send CSV data
+            res.send(csvString);
+
+        });
+    } catch (error) {
+        console.error('Error exporting products:', error);
+        res.status(500).send('Internal Server Error');
+    }
+
+};
+
+
+
+export const importAllProAdmin = async (req, res) => {
+    try {
+        const jsonData = req.body;
+
+        if (!jsonData || !Array.isArray(jsonData)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid JSON data provided'
+            });
+        }
+
+        try {
+            // Process the parsed JSON data
+            for (const productData of jsonData) {
+
+                if (productData.p_id !== undefined) {
+
+                    if (!isNaN(productData.p_id)) {
+                        productData.p_id = parseFloat(productData.p_id);
+                    }
+                    if (productData.p_id !== 'new') {
+                        try {
+                            // Check if the product already exists
+                            const existingProduct = await productModel.findOne({ p_id: productData.p_id }).lean();
+                            if (existingProduct) {
+
+                                if (typeof productData.regularPrice === 'string') {
+                                    productData.regularPrice = parseFloat(productData.regularPrice);
+                                }
+                                if (typeof productData.salePrice === 'string') {
+                                    productData.salePrice = parseFloat(productData.salePrice);
+                                }
+                                if (typeof productData.status === 'string') {
+                                    productData.status = productData.status.toLowerCase();
+                                }
+                                await productModel.findOneAndUpdate({ p_id: productData.p_id }, productData);
+
+                            }
+
+                        } catch (error) {
+                            console.error('Error importing product:', error);
+                        }
+                    } else { }
+
+                    if (productData.p_id === 'new') {
+
+                        const lastProduct = await productModel.findOne().sort({ _id: -1 }).limit(1);
+                        if (typeof lastProduct.p_id === 'string') {
+                            lastProduct.p_id = parseFloat(lastProduct.p_id);
+                        }
+
+                        const lastProductId = lastProduct ? lastProduct.p_id : 0;
+
+                        // Calculate the auto-increment ID
+                        const pro_id = lastProductId + 1;
+
+
+                        try {
+
+                            if (typeof productData.regularPrice === 'string') {
+                                productData.regularPrice = parseFloat(productData.regularPrice);
+                            }
+                            if (typeof productData.salePrice === 'string') {
+                                productData.salePrice = parseFloat(productData.salePrice);
+                            }
+                            if (typeof productData.status === 'string') {
+                                productData.status = productData.status.toLowerCase();
+                            }
+
+
+                            const {
+                                title,
+                                description,
+                                pImage,
+                                images,
+                                slug,
+                                regularPrice,
+                                salePrice,
+                                status,
+                                stock,
+                                Category,
+                                variations,
+                                metaTitle,
+                                metaDescription,
+                                metaKeywords
+                            } = productData;
+
+                            const newProduct = new productModel({
+                                p_id: pro_id,
+                                title,
+                                description,
+                                pImage,
+                                images,
+                                slug,
+                                regularPrice,
+                                salePrice,
+                                status,
+                                stock,
+                                Category,
+                                variations,
+                                metaTitle,
+                                metaDescription,
+                                metaKeywords
+                            });
+
+
+                            // Save the product to the database
+                            await newProduct.save();
+
+                        } catch (error) {
+                            console.error('Error importing product:', error);
+                        }
+
+                    }
+
+
+                    console.log(productData.p_id)
+
+                }
+
+            }
+
+            console.log('Products imported successfully');
+            return res.status(200).json({
+                success: true,
+                message: 'Products imported successfully'
+            });
+
+        } catch (error) {
+            console.error('Error importing products:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error while importing products',
+                error: error.message
+            });
+        }
+
+    } catch (error) {
+        console.error('Error importing products:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error while importing products',
+            error: error.message
+        });
+    }
+};
+
+
+
+export const editHomeLayoutData = async (req, res) => {
+    try {
+
+        const {
+            home_slider,
+            trending_product,
+            trending_product_banner,
+            trending_product_carousal,
+            best_selling_laptop,
+            collection_heading,
+            collection_paragraph,
+            collection_url,
+            collection_img,
+            latest_product,
+            latest_product_banner,
+            latest_product_carousal,
+            best_selling_smartphone,
+            recommended_products
+        } = req.body;
+
+        let updateFields = {
+            home_slider,
+            trending_product,
+            trending_product_banner,
+            trending_product_carousal,
+            best_selling_laptop,
+            collection_heading,
+            collection_paragraph,
+            collection_url,
+            collection_img,
+            latest_product,
+            latest_product_banner,
+            latest_product_carousal,
+            best_selling_smartphone,
+            recommended_products
+        };
+
+        const homeLayoutData = await homeLayoutModel.findOneAndUpdate({}, updateFields, {
+            new: true,
+        });
+
+        if (homeLayoutData) {
+            return res.status(200).json({
+                message: "Home Layout Updated!",
+                success: true,
+                homeLayoutData,
+            });
+        } else {
+            return res.status(404).json({
+                message: "Home Layout not found.",
+                success: false,
+            });
+        }
+
+    } catch (error) {
+        return res.status(400).json({
+            message: `Error while Home Layout updating: ${error}`,
+            success: false,
+            error,
+        });
+    }
+};
